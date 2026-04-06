@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+{% load l10n %}
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Такси-калькулятор</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #1a1a1a;
+            --muted: #666666;
+            --card-bg: #ffffff;
+            --card-border: #dddddd;
+            --input-bg: #ffffff;
+            --input-border: #cccccc;
+            --button-bg: #222222;
+            --button-bg-hover: #444444;
+            --button-text: #ffffff;
+            --row-border: #f0f0f0;
+            --axis: #e5e7eb;
+            --sep: #dddddd;
+        }
+        body.dark {
+            --bg: #0f172a;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --card-bg: #111827;
+            --card-border: #374151;
+            --input-bg: #0b1220;
+            --input-border: #4b5563;
+            --button-bg: #1d4ed8;
+            --button-bg-hover: #2563eb;
+            --button-text: #ffffff;
+            --row-border: #1f2937;
+            --axis: #374151;
+            --sep: #374151;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, Segoe UI, sans-serif;
+            font-size: 15px;
+            line-height: 1.45;
+            color: var(--text);
+            background: var(--bg);
+            margin: 0;
+            padding: 24px 16px 48px;
+        }
+        .wrap {
+            max-width: 520px;
+            margin: 0 auto;
+        }
+        h1 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin: 0 0 4px;
+        }
+        .hint {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin: 0 0 20px;
+        }
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+        .theme-toggle {
+            margin: 0;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            border: 1px solid var(--card-border);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text);
+            cursor: pointer;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-bottom: 16px;
+        }
+        .card h2 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
+            margin: 0 0 14px;
+            font-weight: 600;
+        }
+        .field {
+            margin-bottom: 12px;
+        }
+        .field:last-child { margin-bottom: 0; }
+        label {
+            display: block;
+            font-size: 0.88rem;
+            margin-bottom: 4px;
+        }
+        input[type="number"] {
+            width: 100%;
+            max-width: 280px;
+            padding: 8px 10px;
+            background: var(--input-bg);
+            color: var(--text);
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        button {
+            margin-top: 8px;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            border: none;
+            border-radius: 6px;
+            background: var(--button-bg);
+            color: var(--button-text);
+            cursor: pointer;
+        }
+        button:hover { background: var(--button-bg-hover); }
+        .errorlist { color: #c00; font-size: 0.85rem; margin: 4px 0 0; padding-left: 1.1em; }
+        .result {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 18px 20px;
+            margin-top: 20px;
+        }
+        .result-total {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0 0 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            font-size: 0.9rem;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--row-border);
+        }
+        .row:last-child { border-bottom: none; }
+        .row span:first-child { color: var(--muted); }
+        .row span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .chart {
+            margin: 10px 0 10px;
+        }
+        .gross-track {
+            width: 100%;
+            min-height: 50px;
+            border-radius: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: stretch;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .segment {
+            min-width: 6px;
+            transition: width 0.35s ease;
+            border-right: 0.5px solid #000000;
+        }
+        .segment:last-child {
+            border-right: none;
+        }
+        .segment-profit {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.2), 0 0 14px rgba(34, 197, 94, 0.45);
+        }
+        .segment-expense {
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.14), 0 0 12px rgba(239, 68, 68, 0.35);
+        }
+        .chart-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .bar-label {
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+        .legend-item {
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        .gauge-wrap {
+            margin: 14px 0 12px;
+            display: flex;
+            justify-content: center;
+        }
+        .hour-gauge {
+            position: relative;
+            width: 320px;
+            height: 190px;
+        }
+        .hour-gauge svg {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+        .gauge-dot {
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+        }
+        .gauge-center {
+            position: absolute;
+            left: 50%;
+            top: 78px;
+            transform: translateX(-50%);
+            text-align: center;
+            width: 220px;
+        }
+        .gauge-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .gauge-sub {
+            margin-top: 6px;
+            font-size: 0.88rem;
+            color: var(--muted);
+        }
+        .gauge-limits {
+            display: flex;
+            justify-content: space-between;
+            margin-top: -2px;
+            font-size: 0.8rem;
+            color: var(--muted);
+        }
+        hr.sep {
+            border: none;
+            border-top: 1px dashed var(--sep);
+            margin: 12px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="topbar">
+        <h1>Такси-калькулятор</h1>
+        <button type="button" id="theme-toggle" class="theme-toggle">Тёмная тема</button>
+    </div>
+    <p class="hint">Расчёт за неделю, суммы в zł.</p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="card">
+            <h2>Доход и налоги</h2>
+            <div class="field">
+                <label for="{{ form.weekly_brutto.id_for_label }}">{{ form.weekly_brutto.label }}</label>
+                {{ form.weekly_brutto }}
+                {{ form.weekly_brutto.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.partner_fixed.id_for_label }}">{{ form.partner_fixed.label }}</label>
+                {{ form.partner_fixed }}
+                {{ form.partner_fixed.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.zus_fixed.id_for_label }}">{{ form.zus_fixed.label }}</label>
+                {{ form.zus_fixed }}
+                {{ form.zus_fixed.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.vat_percent.id_for_label }}">{{ form.vat_percent.label }}</label>
+                {{ form.vat_percent }}
+                {{ form.vat_percent.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.ryczalt_percent.id_for_label }}">{{ form.ryczalt_percent.label }}</label>
+                {{ form.ryczalt_percent }}
+                {{ form.ryczalt_percent.errors }}
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Пробег и расходы</h2>
+            <div class="field">
+                <label for="{{ form.km_week.id_for_label }}">{{ form.km_week.label }}</label>
+                {{ form.km_week }}
+                {{ form.km_week.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.liters_per_100km.id_for_label }}">{{ form.liters_per_100km.label }}</label>
+                {{ form.liters_per_100km }}
+                {{ form.liters_per_100km.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.gas_price_per_l.id_for_label }}">{{ form.gas_price_per_l.label }}</label>
+                {{ form.gas_price_per_l }}
+                {{ form.gas_price_per_l.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.insurance_yearly.id_for_label }}">{{ form.insurance_yearly.label }}</label>
+                {{ form.insurance_yearly }}
+                {{ form.insurance_yearly.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.oil_per_10k_km.id_for_label }}">{{ form.oil_per_10k_km.label }}</label>
+                {{ form.oil_per_10k_km }}
+                {{ form.oil_per_10k_km.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.amort_per_10k_km.id_for_label }}">{{ form.amort_per_10k_km.label }}</label>
+                {{ form.amort_per_10k_km }}
+                {{ form.amort_per_10k_km.errors }}
+            </div>
+            <div class="field">
+                <label for="{{ form.hours_week.id_for_label }}">{{ form.hours_week.label }}</label>
+                {{ form.hours_week }}
+                {{ form.hours_week.errors }}
+            </div>
+            <button type="submit">Посчитать</button>
+        </div>
+    </form>
+
+    {% if result %}
+    <div class="result">
+        <p class="result-total">Чистый доход за неделю: {{ result.net_profit|floatformat:2 }} zł</p>
+        <div class="row"><span>Заработок в час</span><span>{{ result.income_per_hour|floatformat:2 }} zł/ч</span></div>
+        <div class="chart">
+            <div class="gross-track">
+                <div
+                    class="segment segment-profit"
+                    style="width: {{ result.profit_segment_percent|unlocalize }}%;"
+                    title="Чистая прибыль: {{ result.net_profit|floatformat:2 }} zł"
+                ></div>
+                {% for item in result.expense_segments %}
+                    <div
+                        class="segment segment-expense"
+                        style="width: {{ item.width_percent|unlocalize }}%; background: {{ item.color }};"
+                        title="{{ item.label }}: {{ item.value|floatformat:2 }} zł"
+                    ></div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="chart-labels">
+            <div class="bar-label">Брутто: {{ result.brutto|floatformat:2 }} zł</div>
+            <div class="legend-item">Зеленый: чистая прибыль</div>
+            <div class="legend-item">Желтый→красный: расходы (чем больше, тем краснее)</div>
+        </div>
+        <div class="gauge-wrap">
+            <div class="hour-gauge" data-hourly="{{ result.income_per_hour|unlocalize }}">
+                <svg viewBox="0 0 320 190" aria-label="Индикатор заработка в час">
+                    <defs>
+                        <linearGradient id="hourArcGradient" x1="44" y1="150" x2="276" y2="150" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#ef4444" />
+                            <stop offset="45%" stop-color="#f59e0b" />
+                            <stop offset="70%" stop-color="#eab308" />
+                            <stop offset="100%" stop-color="#22c55e" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M 44 150 A 116 116 0 0 1 276 150" stroke="url(#hourArcGradient)" stroke-width="12" stroke-linecap="round" fill="none" />
+                    <circle id="gauge-dot" class="gauge-dot" cx="160" cy="34" r="8" fill="#000000" stroke="#ffffff" stroke-width="2"></circle>
+                </svg>
+                <div class="gauge-center">
+                    <div class="gauge-value">{{ result.income_per_hour|floatformat:1 }}</div>
+                    <div class="gauge-sub">zł/ч</div>
+                </div>
+                <div class="gauge-limits">
+                    <span>0 zł/ч</span>
+                    <span>100 zł/ч</span>
+                </div>
+            </div>
+        </div>
+        <div class="row"><span>Брутто</span><span>{{ result.brutto|floatformat:2 }} zł</span></div>
+        <div class="row"><span>Партнёрка</span><span>−{{ result.partner|floatformat:2 }} zł</span></div>
+        <div class="row"><span>ZUS</span><span>−{{ result.zus|floatformat:2 }} zł</span></div>
+        <div class="row"><span>VAT ({{ result.vat_pct|floatformat:2 }}% от брутто)</span><span>−{{ result.vat_amount|floatformat:2 }} zł</span></div>
+        <div class="row"><span>После партнёрки, ZUS и VAT</span><span>{{ result.netto_after_partner_zus_vat|floatformat:2 }} zł</span></div>
+        <div class="row"><span>Ryczałt ({{ result.ryczalt_pct|floatformat:2 }}%)</span><span>−{{ result.ryczalt_amount|floatformat:2 }} zł</span></div>
+        <div class="row"><span>После налогов</span><span>{{ result.after_taxes|floatformat:2 }} zł</span></div>
+        <hr class="sep">
+        <div class="row"><span>Топливо ({{ result.liters|floatformat:2 }} л)</span><span>−{{ result.fuel_cost|floatformat:2 }} zł</span></div>
+        <div class="row"><span>Страховка</span><span>−{{ result.insurance_week|floatformat:2 }} zł</span></div>
+        <div class="row"><span>Масло</span><span>−{{ result.oil_week|floatformat:2 }} zł</span></div>
+        <div class="row"><span>Амортизация и ремонты</span><span>−{{ result.amort_week|floatformat:2 }} zł</span></div>
+        <div class="row"><span>Всего эксплуатация</span><span>−{{ result.operating_total|floatformat:2 }} zł</span></div>
+    </div>
+    {% endif %}
+</div>
+<script>
+    (function() {
+        const body = document.body;
+        const btn = document.getElementById('theme-toggle');
+        const key = 'taxi-theme';
+
+        const applyTheme = (theme) => {
+            const isDark = theme === 'dark';
+            body.classList.toggle('dark', isDark);
+            btn.textContent = isDark ? 'Светлая тема' : 'Тёмная тема';
+        };
+
+        const saved = localStorage.getItem(key);
+        applyTheme(saved === 'dark' ? 'dark' : 'light');
+
+        btn.addEventListener('click', function () {
+            const next = body.classList.contains('dark') ? 'light' : 'dark';
+            localStorage.setItem(key, next);
+            applyTheme(next);
+        });
+
+        const gauge = document.querySelector('.hour-gauge');
+        if (gauge) {
+            const dot = document.getElementById('gauge-dot');
+            const raw = parseFloat(gauge.dataset.hourly || '0');
+            const minValue = 0;
+            const maxValue = 100;
+            const clamped = Math.max(minValue, Math.min(maxValue, raw));
+            const t = (clamped - minValue) / (maxValue - minValue);
+            const angle = Math.PI * (1 - t); // left (pi) to right (0)
+            const cx = 160;
+            const cy = 150;
+            const r = 116;
+            const x = cx + r * Math.cos(angle);
+            const y = cy - r * Math.sin(angle);
+            dot.setAttribute('cx', x.toFixed(2));
+            dot.setAttribute('cy', y.toFixed(2));
+        }
+    })();
+</script>
+</body>
+</html>
