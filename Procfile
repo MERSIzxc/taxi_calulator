@@ -1,1 +1,1 @@
-web: gunicorn site.wsgi
+web: gunicorn taxi_site.wsgi
