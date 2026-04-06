@@ -9,6 +9,11 @@ DEBUG = True
 
 ALLOWED_HOSTS: list[str] = ["*"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://taxi-calulator-production.up.railway.app",
+    "https://*.up.railway.app",
+]
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
